@@ -1,0 +1,62 @@
+[
+  {
+    "event": "You were attacked by a zombie",
+    "foodChanged": 0,
+    "HealthChanged": -20,
+    "scoreChanged": 5
+  },
+  {
+    "event": "You found canned food",
+    "foodChanged": 20,
+    "HealthChanged": 0,
+    "scoreChanged": 10
+  },
+  {
+    "event": "You found a safe house",
+    "foodChanged": 0,
+    "HealthChanged": 10,
+    "scoreChanged": 15
+  },
+  {
+    "event": "You found a weapon",
+    "foodChanged": 0,
+    "HealthChanged": 0,
+    "scoreChanged": 20
+  },
+  {
+    "event": "You found a survivor",
+    "foodChanged": 0,
+    "HealthChanged": 0,
+    "scoreChanged": 25
+  },
+  {
+    "event": "You found a zombie horde",
+    "foodChanged": 0,
+    "HealthChanged": -30,
+    "scoreChanged": 0
+  },
+  {
+    "event": "You found a medical kit",
+    "foodChanged": 0,
+    "HealthChanged": 20,
+    "scoreChanged": 10
+  },
+  {
+    "event": "You found a vehicle",
+    "foodChanged": 0,
+    "HealthChanged": 0,
+    "scoreChanged": 30
+  },
+  {
+    "event": "You found a group of survivors",
+    "foodChanged": 0,
+    "HealthChanged": 0,
+    "scoreChanged": 40
+  },
+  {
+    "event": "You found a zombie nest",
+    "foodChanged": 0,
+    "HealthChanged": -50,
+    "scoreChanged": 0
+  }
+]

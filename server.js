@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('node:fs/promises')
 const path = require('node:path');
-const {parse} = require("dotenv");
 
 const survivorsList = path.join(
     __dirname,
@@ -47,18 +46,41 @@ app.get(`/survivors/:id`, async (req, res) => {
         console.log('Unable to find the survivor');
         res.status(500).json({ error: 'Unable to find the survivor' })
     }
-})
+});
 
 app.post(`/survivors`, async (req, res) => {
-    const newSurvivor = req.body;
     try {
-        const survivor = await fs.appendFile(survivorsList, newSurvivor,  'utf8');
-        res.status(201).json({ message: 'Survivor created successfully' });
+        const { name, weapon, location } = req.body;
+
+        if (!name || !weapon || !location) {
+            return res.status(400).json({ error: 'name, weapon and location are required' });
+        }
+
+        const data = await fs.readFile(survivorsList, 'utf8')
+        const survivors = JSON.parse(data);
+
+        const id = survivors.length > 0 ? Math.max(...survivors.map(s => s.id)) + 1 : 1;
+        const health = 100;
+        const food = 50;
+        const score = 0;
+        const isAlive = true;
+
+        const newSurvivor = { id, name, health, food, weapon, location, score, isAlive };
+
+        survivors.push(newSurvivor);
+
+        await fs.writeFile(survivorsList, JSON.stringify(survivors), 'utf8');
+
+        res.status(201).json({ message: 'Survivor created successfully', newSurvivor } );
     } catch (error) {
         console.log('Unable to create the survivor');
         res.status(500).json({ error: 'Unable to create the survivor' })
     }
-})
+});
+
+app.get(`/event/random`, async (req, res) => {
+       
+});
 
 app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`)
