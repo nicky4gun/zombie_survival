@@ -3,7 +3,7 @@ const express = require('express');
 const fs = require('node:fs/promises')
 const path = require('node:path');
 const { generateRandomEvent } = require("./utils/zombieEvents");
-
+const logger = require('./utils/logger');
 const survivorsList = path.join(
     __dirname,
     './data/survivors.json'
@@ -56,7 +56,7 @@ app.post(`/survivors`, async (req, res) => {
         if (!name || !weapon || !location) {
             return res.status(400).json({ error: 'name, weapon and location are required' });
         }
-
+        logger.log('Creating a new survivor');
         const data = await fs.readFile(survivorsList, 'utf8')
         const survivors = JSON.parse(data);
 
@@ -72,6 +72,7 @@ app.post(`/survivors`, async (req, res) => {
 
         await fs.writeFile(survivorsList, JSON.stringify(survivors), 'utf8');
 
+        logger.log(`New Survivor created successfully: ${newSurvivor.name}`);
         res.status(201).json({ message: 'Survivor created successfully', newSurvivor } );
     } catch (error) {
         console.log('Unable to create the survivor');
@@ -101,6 +102,8 @@ app.post('/survivors/:id/scavenge', async (req, res) => {
             return;
         }
 
+        logger.log(`Survivor ${survivor.name} is scavenging`);
+
         const event = await generateRandomEvent();
 
         survivor.health += event.HealthChanged;
@@ -108,6 +111,7 @@ app.post('/survivors/:id/scavenge', async (req, res) => {
         survivor.score += event.scoreChanged;
 
         if (survivor.health <= 0) {
+            logger.log(`Survivor ${survivor.name} has died`);
             survivor.isAlive = false;
         }
 
@@ -120,8 +124,27 @@ app.post('/survivors/:id/scavenge', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server listening on http://localhost:${PORT}`)
+app.get('/leaderboard', async (req, res) => {
+    try {
+        const data = await fs.readFile(survivorsList, 'utf8')
+        const survivors = JSON.parse(data);
+
+        const leaderboard = survivors
+            .filter(s => s.isAlive)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10)
+            .map((s, index) => ({ rank: index + 1, name: s.name, score: s.score }));
+
+        res.status(200).json(leaderboard);
+    } catch (error) {
+        console.error('Error fetching the leaderboard:', error);
+        res.status(500).json({ error: 'Unable to fetch the leaderboard' });
+    }
 });
+
+app.listen(PORT, () => {
+    logger.log(`Server listening on http://localhost:${PORT}`);
+});
+
 
 
