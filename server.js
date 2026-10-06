@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('node:fs/promises')
 const path = require('node:path');
+const { generateRandomEvent } = require("./utils/zombieEvents");
 
 const survivorsList = path.join(
     __dirname,
@@ -79,7 +80,44 @@ app.post(`/survivors`, async (req, res) => {
 });
 
 app.get(`/event/random`, async (req, res) => {
-       
+    try {
+        const event = await generateRandomEvent();
+        res.status(200).json(event);
+    } catch (error) {
+        console.log('Unable to generate a random event');
+        res.status(500).json({ error: 'Unable to generate a random event' });
+    }
+});
+
+app.post('/survivors/:id/scavenge', async (req, res) => {
+    try {
+        const data = await fs.readFile(survivorsList, 'utf8')
+
+        const survivors = JSON.parse(data)
+        const survivor = survivors.find(s => s.id === parseInt(req.params.id));
+
+        if (!survivor) {
+            res.status(404).json({ error: 'Survivor not found' });
+            return;
+        }
+
+        const event = await generateRandomEvent();
+
+        survivor.health += event.HealthChanged;
+        survivor.food += event.foodChanged;
+        survivor.score += event.scoreChanged;
+
+        if (survivor.health <= 0) {
+            survivor.isAlive = false;
+        }
+
+        await fs.writeFile(survivorsList, JSON.stringify(survivors), 'utf8');
+
+        res.status(200).json({ message: 'Survivor scavenged successfully', event: `${event.event}`,  survivor });
+    } catch (error) {
+        console.log('Unable to scavenge the survivor');
+        res.status(500).json({ error: 'Unable to scavenge the survivor' });
+    }
 });
 
 app.listen(PORT, () => {
