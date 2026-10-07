@@ -1,13 +1,17 @@
 require('dotenv').config();
+
 const express = require('express');
 const fs = require('node:fs/promises')
 const path = require('node:path');
 const { generateRandomEvent } = require("./utils/zombieEvents");
 const logger = require('./utils/logger');
+
 const survivorsList = path.join(
     __dirname,
     './data/survivors.json'
 );
+
+const DIFFICULTY = process.env.DIFFICULTY;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -129,7 +133,14 @@ app.post('/survivors/:id/scavenge', async (req, res) => {
 
         const event = await generateRandomEvent();
 
-        survivor.health += event.HealthChanged;
+        if (DIFFICULTY === 'hard') {
+            survivor.health += event.HealthChanged * 2;
+        } else if (DIFFICULTY === 'easy') {
+            survivor.health += event.HealthChanged * 0.5;
+        } else {
+            survivor.health += event.HealthChanged;
+        }
+
         survivor.food += event.foodChanged;
         survivor.score += event.scoreChanged;
 
@@ -165,7 +176,75 @@ app.get('/leaderboard', async (req, res) => {
     }
 });
 
+app.get(`/survivors/location/:location`, async (req, res) => {
+    try {
+        const data = await fs.readFile(survivorsList, 'utf8')
+        const survivors = JSON.parse(data)
 
+        const survivorsAtLocation = survivors.filter(s => s.location === req.params.location);
+
+        if (survivorsAtLocation.length === 0) {
+            res.status(404).json({ error: 'No survivors found at this location' });
+            return;
+        }
+
+        res.status(200).json(survivorsAtLocation);
+
+    } catch (error) {
+        console.log('Unable to find the survivors', error);
+        res.status(500).json({ error: 'Unable to find the survivors' })
+    }
+})
+
+app.post(`/survivors/:id/food`, async (req, res) => {
+    try {
+        const data = await fs.readFile(survivorsList, 'utf8')
+        const survivors = JSON.parse(data)
+        const survivor = survivors.find(s => s.id === parseInt(req.params.id));
+
+        if (!survivor) {
+            res.status(404).json({ error: 'No survivor found with that id' });
+            return;
+        }
+
+        survivor.food += 10;
+        await fs.writeFile(survivorsList, JSON.stringify(survivors), 'utf8');
+
+        res.status(200).json({ message: 'Food added successfully', survivor });
+    } catch (error) {
+        console.log('Unable to add food to the survivor', error);
+        res.status(500).json({ error: 'Unable to add food to the survivor' });
+    }
+})
+
+app.post(`/survivors/:id/zombieAttack`, async (req, res) => {
+    try {
+        const data = await fs.readFile(survivorsList, 'utf8')
+        const survivors = JSON.parse(data)
+        const survivor = survivors.find(s => s.id === parseInt(req.params.id));
+
+        if (!survivor) {
+            res.status(404).json({ error: 'No survivor found with that id' });
+            return;
+        }
+
+        const damage = Math.random() * (30 - 5) + 5;
+        survivor.health -= damage;
+
+        if (survivor.health <= 0) {
+            survivor.isAlive = false;
+        }
+        console.log(`zombie attack and dealt ${damage.toFixed(2)} damage to survivor ${survivor.name}`);
+        console.log(`survivor health after zombie attack: ${survivor.health}`);
+
+        await fs.writeFile(survivorsList, JSON.stringify(survivors), 'utf8');
+
+        res.status(200).json({ message: 'Zombie attack processed successfully', survivor });
+    } catch (error) {
+        console.log('Unable to process zombie attack for the survivor', error);
+        res.status(500).json({ error: 'Unable to process zombie attack for the survivor' });
+    }
+})
 
 app.listen(PORT, () => {
     logger.log(`Server listening on http://localhost:${PORT}`);
